@@ -194,26 +194,85 @@ int main(int argc, char **argv)
             // compute current jacobians
             KDL::Jacobian J_cam = robot.getEEJacobian();
             KDL::Frame cam_T_object(KDL::Rotation::Quaternion(aruco_pose[3], aruco_pose[4], aruco_pose[5], aruco_pose[6]), KDL::Vector(aruco_pose[0], aruco_pose[1], aruco_pose[2]));
-            KDL::Frame frame_offset=cam_T_object;
-            frame_offset.p=cam_T_object.p -KDL::Vector(0,0,0.5);
-            frame_offset.M=cam_T_object.M*KDL::Rotation::RotX(-3.14);
-            KDL::Frame debora=robot.getEEFrame()*frame_offset;
-            Eigen::Matrix<double,3,1> e_o = computeOrientationError(toEigen(debora.M), toEigen(robot.getEEFrame().M));
-            // Error between the initial and the current frame
-            // Needed to stay as close as possible to the initial position
-            Eigen::Matrix<double,3,1> e_o_w = computeOrientationError(toEigen(Fi.M), toEigen(robot.getEEFrame().M));
+           
             
-            Eigen::Matrix<double,3,1> e_p = computeLinearError(toEigen(debora.p),toEigen(robot.getEEFrame().p));  
-            // resolved velocity control low
-            Eigen::Matrix<double,6,1> x_tilde; 
+            // /////////////////////////////////// CONTROLLO LOOK AT POINT PROF /////////////////////////////////////////////////
+            
+            // // look at point: compute rotation error from angle/axis
+            // Eigen::Matrix<double,3,1> aruco_pos_n = toEigen(cam_T_object.p); //(aruco_pose[0],aruco_pose[1],aruco_pose[2]);
+            // aruco_pos_n.normalize();
+            // Eigen::Vector3d r_o = skew(Eigen::Vector3d(0,0,1))*aruco_pos_n;
+            // double aruco_angle = std::acos(Eigen::Vector3d(0,0,1).dot(aruco_pos_n));
+            // KDL::Rotation Re = KDL::Rotation::Rot(KDL::Vector(r_o[0], r_o[1], r_o[2]), aruco_angle);
 
-            // Get the errors of the camera frame
-            // X: error with the respect to the initial position
-            // YZ: error with the respect to s
-            x_tilde << e_p,  e_o[0], e_o[1], e_o[2];
+            // // compute errors
+            // Eigen::Matrix<double,3,1> e_o = computeOrientationError(toEigen(robot.getEEFrame().M*Re), toEigen(robot.getEEFrame().M));
+            // // Needed to stay as close as possible to the initial position
+            // Eigen::Matrix<double,3,1> e_o_w = computeOrientationError(toEigen(Fi.M), toEigen(robot.getEEFrame().M));
+            // Eigen::Matrix<double,3,1> e_p = computeLinearError(pdi,toEigen(robot.getEEFrame().p));
+            // Eigen::Matrix<double,6,1> x_tilde; x_tilde << e_p,  e_o_w[0], e_o[1], e_o[2];
 
-            Eigen::MatrixXd J_pinv = J_cam.data.completeOrthogonalDecomposition().pseudoInverse();
-            dqd.data = lambda*J_pinv*x_tilde /*+ 10*(Eigen::Matrix<double,7,7>::Identity() - J_pinv*J_cam.data)*(qdi - toEigen(jnt_pos))*/;
+
+            // //////////////////////////////// CONTROLLO CON OFFSET ///////////////////////////////////////////////////////
+           
+            // //ci creiamo un frame offset che rappresenta la posizione finale desiderata dell'EE
+            // KDL::Frame frame_offset=cam_T_object;
+            // //la posizione è shiftata di 0.5 lungo z
+            // frame_offset.p=cam_T_object.p -KDL::Vector(0,0,0.5);
+            // //l'orientamento è ruotato di 180° attorno a x
+            // frame_offset.M=cam_T_object.M*KDL::Rotation::RotX(-3.14);
+            // //ci riportiamo questo frame al frame base
+            // KDL::Frame base_T_offset=robot.getEEFrame()*frame_offset;
+
+            // // compute errors
+            // Eigen::Matrix<double,3,1> e_o = computeOrientationError(toEigen(base_T_offset.M), toEigen(robot.getEEFrame().M));
+            // Eigen::Matrix<double,3,1> e_o_w = computeOrientationError(toEigen(Fi.M), toEigen(robot.getEEFrame().M));
+            // Eigen::Matrix<double,3,1> e_p = computeLinearError(toEigen(base_T_offset.p),toEigen(robot.getEEFrame().p));  
+            // Eigen::Matrix<double,6,1> x_tilde; 
+            // x_tilde << e_p,  e_o[0], e_o[1], e_o[2];
+
+
+            // ///////////////////////////////////////  LEGGE DI CONTROLLO ///////////////////////////////////////////////////////
+            
+            // Eigen::MatrixXd J_pinv = J_cam.data.completeOrthogonalDecomposition().pseudoInverse();
+            // dqd.data = lambda*J_pinv*x_tilde /*+ 10*(Eigen::Matrix<double,7,7>::Identity() - J_pinv*J_cam.data)*(qdi - toEigen(jnt_pos))*/;
+
+
+            
+            //////////////////////////////////  CONTROLLO LOOK AT POINT IMPROVED //////////////////////////////////////////
+
+            // Ci ricaviamo s
+            Eigen::Matrix<double,3,1> cPo = toEigen(cam_T_object.p);
+            double norm_cPo = cPo.norm();
+            Eigen::Matrix<double,3,1> s = cPo/norm_cPo;
+            // Ci ricaviamo Rc
+            Eigen::Matrix<double,3,3> Rc = toEigen(robot.getEEFrame().M);
+            // Ci costruiamo R
+            Eigen::Matrix<double,6,6> R = Eigen::MatrixXd::Zero(6,6);
+            R.block(0,0,3,3)=Rc;
+            R.block(3,3,3,3)=Rc;
+            // Calcoliamo lo skew-symmetric di s
+             Eigen::Matrix<double,3,3> S = skew(s);
+            // Ci costruiamo L
+            Eigen::Matrix<double,3,6> L = Eigen::MatrixXd::Zero(3,6);
+            Eigen::Matrix<double,3,3> L_left = (-1/norm_cPo)*(Eigen::MatrixXd::Identity(3,3)-s*s.transpose());
+            Eigen::Matrix<double,3,3> L_right = S;
+            L.block(0,0,3,3) = L_left;
+            L.block(0,3,3,3) = L_right;
+            L = L*R.transpose();
+
+            // calcoliamo sd
+            Eigen::Matrix<double,3,1> sd = Eigen::Vector3d(0,0,1);
+            // calcoliamo N
+            Eigen::MatrixXd LJ=L*toEigen(J_cam);
+            Eigen::MatrixXd LJ_pinv=LJ.completeOrthogonalDecomposition().pseudoInverse();;
+            Eigen::MatrixXd N=((Eigen::Matrix<double,7,7>::Identity())-LJ_pinv*LJ);
+
+            /////////////////////////////// LEGGE DI CONTROLLO /////////////////////////////////////
+            double k=5;
+            Eigen::Matrix<double,7,1> dq0 =qdi - toEigen(jnt_pos);
+            dqd.data = k*LJ_pinv*sd + N*dq0;
+
 
             // debug
             // std::cout << "x_tilde: " << std::endl << x_tilde << std::endl;
