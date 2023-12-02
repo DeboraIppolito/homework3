@@ -6,7 +6,6 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/features2d.hpp>
 using namespace cv;
-
 static const std::string OPENCV_WINDOW = "Image window";
 
 class ImageConverter
@@ -35,7 +34,6 @@ public:
 
   void imageCb(const sensor_msgs::ImageConstPtr& msg)
   {
-    //usiamo il bridge per convertire il ros message in openCV image
     cv_bridge::CvImagePtr cv_ptr;
     try
     {
@@ -58,7 +56,6 @@ public:
     params.filterByCircularity = true;
     params.minCircularity = 0;  
     params.maxCircularity = 1;  
-
     // Creazione del rilevatore di blob con i parametri configurati
     Ptr<SimpleBlobDetector> detector = SimpleBlobDetector::create(params);
 
@@ -75,7 +72,7 @@ public:
 
     // Pubblica il video modificato
     image_pub_.publish(cv_ptr->toImageMsg());
-    
+
     // Informazioni di debug
     ROS_INFO("Numero di cerchi rilevati: %lu", keypoints.size());
     for (const auto& keypoint : keypoints) {
