@@ -1,14 +1,5 @@
 <sdf version='1.7'>
   <world name='default'>
-
-<!-- Ci includiamo il modello .sdf dell'oggetto -->
-  <include>
-      <static>1</static>
-      <uri>model://circular_object</uri>
-      <name>circular object</name>
-      <pose>1 -0.5 0.6 0 1.57 0</pose>
-  </include>
-
     <model name='ground_plane'>
       <static>1</static>
       <link name='link'>
@@ -57,7 +48,6 @@
         <kinematic>0</kinematic>
       </link>
     </model>
-
     <light name='sun' type='directional'>
       <cast_shadows>1</cast_shadows>
       <pose>0 0 10 0 -0 0</pose>
@@ -95,7 +85,6 @@
         </constraints>
       </ode>
     </physics>
-
     <gui fullscreen='0'>
       <camera name='user_camera'>
         <pose>6.21206 -4.83995 3.2431 0 0.275643 2.35619</pose>
@@ -103,7 +92,6 @@
         <projection_type>perspective</projection_type>
       </camera>
     </gui>
-
     <gravity>0 0 -9.8</gravity>
     <magnetic_field>6e-06 2.3e-05 -4.2e-05</magnetic_field>
     <atmosphere type='adiabatic'/>
@@ -120,73 +108,76 @@
       <elevation>0</elevation>
       <heading_deg>0</heading_deg>
     </spherical_coordinates>
+    <!-- <model name='aruco_marker'>
+      <link name='link'>
+        <visual name='front_visual'>
+          <pose>0 0 0 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.001 0.10 0.10</size>
+            </box>
+          </geometry>
+          <material>
+            <script>
+              <uri>model://aruco_marker/materials/scripts</uri>
+              <uri>model://aruco_marker/materials/textures</uri>
+              <name>Marker</name>
+            </script>
+          </material>
+        </visual>
+        <visual name='rear_visual'>
+          <pose>-0.0005 0 0 0 -0 0</pose>
+          <geometry>
+            <box>
+              <size>0.001 0.10 0.10</size>
+            </box>
+          </geometry>
+        </visual>
+        <collision name='collision'>
+          <pose>-0.0005 0 0 0 -0 0</pose>
+          <geometry>
+            <box>
+              <size>0.001 0.10 0.10</size>
+            </box>
+          </geometry>
+          <max_contacts>10</max_contacts>
+          <surface>
+            <contact>
+              <ode/>
+            </contact>
+            <bounce/>
+            <friction>
+              <torsional>
+                <ode/>
+              </torsional>
+              <ode/>
+            </friction>
+          </surface>
+        </collision>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>1</kinematic>
+        <inertial>
+          <pose>0 0 0 0 -0 0</pose>
+          <inertia>
+            <ixx>1</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>1</iyy>
+            <iyz>0</iyz>
+            <izz>1</izz>
+          </inertia>
+          <mass>1</mass>
+        </inertial>
+      </link>
+      <pose>1 -0.5 0.6 0 0 0</pose>
+    </model> -->
 
-
-    <!-- // <model name='aruco_marker'>
-    //   <link name='link'>
-    //     <visual name='front_visual'>
-    //       <pose>0 0 0 0 0 0</pose>
-    //       <geometry>
-    //         <box>
-    //           <size>0.001 0.10 0.10</size>
-    //         </box>
-    //       </geometry>
-    //       <material>
-    //         <script>
-    //           <uri>model://aruco_marker/materials/scripts</uri>
-    //           <uri>model://aruco_marker/materials/textures</uri>
-    //           <name>Marker</name>
-    //         </script>
-    //       </material>
-    //     </visual>
-    //     <visual name='rear_visual'>
-    //       <pose>-0.0005 0 0 0 -0 0</pose>
-    //       <geometry>
-    //         <box>
-    //           <size>0.001 0.10 0.10</size>
-    //         </box>
-    //       </geometry>
-    //     </visual>
-    //     <collision name='collision'>
-    //       <pose>-0.0005 0 0 0 -0 0</pose>
-    //       <geometry>
-    //         <box>
-    //           <size>0.001 0.10 0.10</size>
-    //         </box>
-    //       </geometry>
-    //       <max_contacts>10</max_contacts>
-    //       <surface>
-    //         <contact>
-    //           <ode/>
-    //         </contact>
-    //         <bounce/>
-    //         <friction>
-    //           <torsional>
-    //             <ode/>
-    //           </torsional>
-    //           <ode/>
-    //         </friction>
-    //       </surface>
-    //     </collision>
-    //     <self_collide>0</self_collide>
-    //     <enable_wind>0</enable_wind>
-    //     <kinematic>1</kinematic>
-    //     <inertial>
-    //       <pose>0 0 0 0 -0 0</pose>
-    //       <inertia>
-    //         <ixx>1</ixx>
-    //         <ixy>0</ixy>
-    //         <ixz>0</ixz>
-    //         <iyy>1</iyy>
-    //         <iyz>0</iyz>
-    //         <izz>1</izz>
-    //       </inertia>
-    //       <mass>1</mass>
-    //     </inertial>
-    //   </link>
-    //   <pose>1 -0.3 0.5 0 0 -3.14</pose>
-    // </model> -->
-
+    <include>
+    <uri>model://circular_object</uri>
+    <name>circular_object</name>
+    <pose>2 -0.5 1 0 1.67 0</pose> <!-- Adjust the pose to place the model -->
+    </include>
 
     <state world_name='default'>
       <sim_time>61 770000000</sim_time>
@@ -207,6 +198,5 @@
         <pose>0 0 10 0 -0 0</pose>
       </light>
     </state>
-
   </world>
 </sdf>

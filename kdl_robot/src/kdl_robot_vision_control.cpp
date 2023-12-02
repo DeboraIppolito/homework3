@@ -1,12 +1,10 @@
 #include "kdl_ros_control/kdl_robot.h"
 #include "kdl_ros_control/kdl_control.h"
 #include "kdl_ros_control/kdl_planner.h"
-
 #include "kdl_parser/kdl_parser.hpp"
 #include "urdf/model.h"
 #include <std_srvs/Empty.h>
 #include "eigen_conversions/eigen_kdl.h"
-
 #include "ros/ros.h"
 #include "std_msgs/Float64.h"
 #include "sensor_msgs/JointState.h"

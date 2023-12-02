@@ -58,6 +58,7 @@ void KDLRobot::update(std::vector<double> _jnt_values, std::vector<double> _jnt_
     fkVelSol_->JntToCart(jntVel, s_Fv_f);
     s_T_f = s_Fv_f.GetTwist();
     s_F_f = s_Fv_f.GetFrame();
+    //int err = jacSol_->JntToJac(jntArray_, s_J_f);
     int err = fkSol_->JntToCart(jntArray_,s_F_f);
     err = jacSol_->JntToJac(jntArray_, s_J_f);
     err = jntJacDotSol_->JntToJacDot(jntVel, s_J_dot_q_dot_f);
@@ -179,6 +180,32 @@ KDL::JntArray KDLRobot::getInvKin(const KDL::JntArray &q,
     }
     return jntArray_out_;
 }
+
+KDL::JntArray KDLRobot::getInvKinVel(const KDL::JntArray &qd,
+                        const KDL::Twist &eeFrameVel)
+{
+    KDL::JntArray jntArray_out_;
+    jntArray_out_.resize(chain_.getNrOfJoints());
+    int err = ikVelSol_->CartToJnt(qd, eeFrameVel, jntArray_out_);
+    if (err != 0)// cartToJnt scrive in jntArray_out_come parametro I/O, il ritorno è la gestione dell'errore soltanto
+    {
+        printf("inverse kinematics failed with error: %d \n", err);
+    }
+    return jntArray_out_;
+}
+
+ Eigen::Matrix<double,7,1> getInvKinAcc(const KDL::Twist &eeFrameAcc,const KDL::JntArray &dqd,
+                                Eigen::Matrix<double,6,7> J,Eigen::Matrix<double,6,7> Jdot){
+    Eigen::Matrix<double,7,1> vel;
+    for(int i=0;i<7;i++){
+        vel[i]=dqd.data[i];
+    }
+   
+    return pseudoinverse(J)*(toEigen(eeFrameAcc)-Jdot*vel);
+}
+
+
+
 ////////////////////////////////////////////////////////////////////////////////
 //                              END-EFFECTOR                                  //
 ////////////////////////////////////////////////////////////////////////////////
@@ -209,15 +236,29 @@ KDL::Jacobian KDLRobot::getEEJacobian()
 {
     return s_J_ee_;
 }
-
+//////////////
+// Eigen::MatrixXd KDLRobot::getJacobian()
+// {
+//     return s_J_ee_;
+// }
+///////////////////
 KDL::Jacobian KDLRobot::getEEBodyJacobian()
 {
     return b_J_ee_;
 }
 
+// KDL::Jacobian KDLRobot::getEEJacDotqDot()
+// {
+//     return s_J_dot_ee_*jntVel_.data;
+// }
 Eigen::VectorXd KDLRobot::getEEJacDotqDot()
 {
-    return s_J_dot_ee_.data;
+    return s_J_dot_ee_.data*jntVel_.data;
+}
+
+Eigen::VectorXd KDLRobot::getEEJacDotqDot_red()
+{
+    return s_J_dot_ee_.data.topRows(3)*jntVel_.data;
 }
 
 void KDLRobot::addEE(const KDL::Frame &_f_F_ee)
