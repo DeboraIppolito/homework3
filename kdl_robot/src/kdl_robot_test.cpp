@@ -308,22 +308,24 @@ int main(int argc, char **argv)
 
             // inverse kinematics
             qd.data << jnt_pos[0], jnt_pos[1], jnt_pos[2], jnt_pos[3], jnt_pos[4], jnt_pos[5], jnt_pos[6];
-            qd = robot.getInvKin(qd, des_pose);
+            //modifichiamo qd affinché tenga conto anche del link camera
+            qd = robot.getInvKin(qd, des_pose*robot.getFlangeEE().Inverse());
             dqd=robot.getInvKinVel(qd,des_cart_vel);
-            // joint space inverse dynamics control
-          // tau = controller_.idCntr(qd, dqd, ddqd, Kp, Kd);
             
+            // joint space inverse dynamics control
+            // tau = controller_.idCntr(qd, dqd, ddqd, Kp, Kd);
+
+            // Cartesian space inverse dynamics control         
             double Kp = 80;
             double Ko = 50;
             double Kdp = 40;
+            tau = controller_.idCntr(des_pose, des_cart_vel, des_cart_acc, Kp, Ko, Kdp, 2*sqrt(Ko));
 
-            // Cartesian space inverse dynamics control
-            tau = controller_.idCntr(des_pose, des_cart_vel, des_cart_acc,
-                                     Kp, Ko, Kdp, 2*sqrt(Ko));
             //CArtesian space inverse dynamics controll exploiting redundancy, we do not assign the orientation
-           //  tau = controller_.idCntr(des_pose, des_cart_vel, des_cart_acc,
-            //                          Kp, Kdp);                          
+            //tau = controller_.idCntr(des_pose, des_cart_vel, des_cart_acc, Kp, Kdp);             
+
             Eigen::VectorXd errors =qd.data-robot.getJntValues();
+
             // Set torques
             tau1_msg.data = tau[0];
             tau2_msg.data = tau[1];
