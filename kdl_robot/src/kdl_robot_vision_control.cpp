@@ -91,6 +91,9 @@ int main(int argc, char **argv)
     ros::Publisher joint5_dq_pub = n.advertise<std_msgs::Float64>("/iiwa/VelocityJointInterface_J5_controller/command", 1);
     ros::Publisher joint6_dq_pub = n.advertise<std_msgs::Float64>("/iiwa/VelocityJointInterface_J6_controller/command", 1);
     ros::Publisher joint7_dq_pub = n.advertise<std_msgs::Float64>("/iiwa/VelocityJointInterface_J7_controller/command", 1);    
+    ros::Publisher sx_pub = n.advertise<std_msgs::Float64>("/iiwa/sx", 1);
+    ros::Publisher sy_pub = n.advertise<std_msgs::Float64>("/iiwa/sy", 1);
+    ros::Publisher sz_pub = n.advertise<std_msgs::Float64>("/iiwa/sz", 1);    
 
     // Services
     ros::ServiceClient robot_set_state_srv = n.serviceClient<gazebo_msgs::SetModelConfiguration>("/gazebo/set_model_configuration");
@@ -111,6 +114,7 @@ int main(int argc, char **argv)
 
     // Messages
     std_msgs::Float64 dq1_msg, dq2_msg, dq3_msg, dq4_msg, dq5_msg, dq6_msg, dq7_msg;
+    std_msgs::Float64 sx_msg,sy_msg,sz_msg;
     std_srvs::Empty pauseSrv;
 
     // Joints
@@ -227,7 +231,7 @@ int main(int argc, char **argv)
             // Eigen::Matrix<double,3,1> e_o_w = computeOrientationError(toEigen(Fi.M), toEigen(robot.getEEFrame().M));
             // Eigen::Matrix<double,3,1> e_p = computeLinearError(toEigen(base_T_offset.p),toEigen(robot.getEEFrame().p));  
             // Eigen::Matrix<double,6,1> x_tilde; 
-            // x_tilde << e_p,  e_o[0], e_o[1], e_o[2];
+            // x_tilde << e_p,  e_o_[0], e_o[1], e_o[2];
 
 
             // ///////////////////////////////////////  LEGGE DI CONTROLLO ///////////////////////////////////////////////////////
@@ -269,9 +273,15 @@ int main(int argc, char **argv)
             /////////////////////////////// LEGGE DI CONTROLLO /////////////////////////////////////
             double k=5;
             Eigen::Matrix<double,7,1> dq0 =qdi - toEigen(jnt_pos);
-            dqd.data = k*LJ_pinv*sd + N*dq0;
+             dqd.data = k*LJ_pinv*sd + N*dq0;
+            //dqd.data = k*LJ_pinv*sd;
 
 
+
+        //s msg
+        sx_msg.data=s[0];
+        sy_msg.data=s[1];
+        sz_msg.data=s[2];
             // debug
             // std::cout << "x_tilde: " << std::endl << x_tilde << std::endl;
             // std::cout << "Rd: " << std::endl << toEigen(robot.getEEFrame().M*Re) << std::endl;
@@ -308,7 +318,9 @@ int main(int argc, char **argv)
         joint5_dq_pub.publish(dq5_msg);
         joint6_dq_pub.publish(dq6_msg);
         joint7_dq_pub.publish(dq7_msg);
-
+        sx_pub.publish(sx_msg);
+        sy_pub.publish(sy_msg);
+        sz_pub.publish(sz_msg);
         ros::spinOnce();
         loop_rate.sleep();
     }

@@ -129,6 +129,10 @@ int main(int argc, char **argv)
     ros::Publisher joint7_err = n.advertise<std_msgs::Float64>("/iiwa/joint7_err", 1);
      //norm error
     ros::Publisher norm_err = n.advertise<std_msgs::Float64>("/iiwa/norm_error", 1);
+    //norm error in cartesian space
+    ros::Publisher norm_err_cart_pos = n.advertise<std_msgs::Float64>("/iiwa/norm_pos_error_cartesian", 1);
+    ros::Publisher norm_err_cart_or = n.advertise<std_msgs::Float64>("/iiwa/norm_or_error_cartesian", 1);
+   
     // Services
     ros::ServiceClient robot_set_state_srv = n.serviceClient<gazebo_msgs::SetModelConfiguration>("/gazebo/set_model_configuration");
     ros::ServiceClient pauseGazebo = n.serviceClient<std_srvs::Empty>("/gazebo/pause_physics");
@@ -163,7 +167,7 @@ int main(int argc, char **argv)
     std_msgs::Float64 dqd1_msg, dqd2_msg, dqd3_msg, dqd4_msg, dqd5_msg, dqd6_msg, dqd7_msg;
     std_msgs::Float64 ddqd1_msg, ddqd2_msg, ddqd3_msg, ddqd4_msg, ddqd5_msg, ddqd6_msg, ddqd7_msg;
     std_msgs::Float64 err1_msg, err2_msg, err3_msg, err4_msg, err5_msg, err6_msg, err7_msg;
-    std_msgs::Float64 norm_msg;
+    std_msgs::Float64 norm_msg, norm_pos_cart_msg, norm_or_cart_msg;
     
     std_srvs::Empty pauseSrv;
 
@@ -234,11 +238,11 @@ int main(int argc, char **argv)
     KDLPlanner planner(traj_duration, acc_duration, init_position, end_position,radius);
     // Retrieve the first trajectory point
     std::string profile="cubic";
-    std::string path="circular";
+    std::string path="linear";
     trajectory_point p = planner.compute_trajectory(t,profile,path);
 
     // Gains
-    double Kp = 150, Kd = 72;
+    double Kp = 200, Kd = 72;
 
     // Retrieve initial simulation time
     ros::Time begin = ros::Time::now();
@@ -308,23 +312,33 @@ int main(int argc, char **argv)
 
             // inverse kinematics
             qd.data << jnt_pos[0], jnt_pos[1], jnt_pos[2], jnt_pos[3], jnt_pos[4], jnt_pos[5], jnt_pos[6];
-            //modifichiamo qd affinché tenga conto anche del link camera
             qd = robot.getInvKin(qd, des_pose*robot.getFlangeEE().Inverse());
-            dqd=robot.getInvKinVel(qd,des_cart_vel);
+
             
+            dqd=robot.getInvKinVel(qd,des_cart_vel);
             // joint space inverse dynamics control
-            // tau = controller_.idCntr(qd, dqd, ddqd, Kp, Kd);
-
-            // Cartesian space inverse dynamics control         
+           // tau = controller_.idCntr(qd, dqd, ddqd, Kp, Kd);
+            
             double Kp = 80;
-            double Ko = 50;
+            double Ko = 40;
             double Kdp = 40;
-            tau = controller_.idCntr(des_pose, des_cart_vel, des_cart_acc, Kp, Ko, Kdp, 2*sqrt(Ko));
 
+            // Cartesian space inverse dynamics control
+            tau = controller_.idCntr(des_pose, des_cart_vel, des_cart_acc,
+                                     Kp, Ko, Kdp, 2*sqrt(Ko));
             //CArtesian space inverse dynamics controll exploiting redundancy, we do not assign the orientation
-            //tau = controller_.idCntr(des_pose, des_cart_vel, des_cart_acc, Kp, Kdp);             
-
+           //  tau = controller_.idCntr(des_pose, des_cart_vel, des_cart_acc,
+            //                          Kp, Kdp);                          
             Eigen::VectorXd errors =qd.data-robot.getJntValues();
+
+            Eigen::Vector3d cart_error_pos=toEigen(des_pose.p)-toEigen(robot.getEEFrame().p);
+            double cart_pos_er_norm=cart_error_pos.norm();
+            Eigen::Vector3d RPY_des;
+            des_pose.M.GetRPY(RPY_des[0],RPY_des[1],RPY_des[2]);
+            Eigen::Vector3d RPY_e;
+            robot.getEEFrame().M.GetRPY(RPY_e[0],RPY_e[1],RPY_e[2]);
+            Eigen::Vector3d cart_error_or=RPY_des-RPY_e;
+            double cart_or_er_norm=cart_error_or.norm();
 
             // Set torques
             tau1_msg.data = tau[0];
@@ -371,6 +385,8 @@ int main(int argc, char **argv)
             err7_msg.data=errors[6];;
             //creating error norm msg
             norm_msg.data=errors.norm();
+            norm_pos_cart_msg.data=cart_pos_er_norm;
+            norm_or_cart_msg.data=cart_or_er_norm;
             // Publish
             joint1_effort_pub.publish(tau1_msg);
             joint2_effort_pub.publish(tau2_msg);
@@ -416,6 +432,8 @@ int main(int argc, char **argv)
             joint7_err.publish(err7_msg);
             //norm error
             norm_err.publish(norm_msg);
+            norm_err_cart_pos.publish(norm_pos_cart_msg);
+            norm_err_cart_or.publish(norm_or_cart_msg);
                         
             ros::spinOnce();
             loop_rate.sleep();
